@@ -1,4 +1,4 @@
-import { lodash as _, Logger, getInputs, getStepContext, getCredentials } from '@serverless-cd/core';
+import { lodash as _, Logger, getInputs, getStepContext } from '@serverless-cd/core';
 import Cache, { IProps, ICredentials } from './cache';
 
 interface ISchemaError {
@@ -11,10 +11,14 @@ const getCacheInputs = async (inputs: Record<string, any>, context: Record<strin
   const newInputs = getInputs(inputs, context) as Record<string, any>;
   logger.debug(`newInputs: ${JSON.stringify(newInputs)}`);
 
-  const credentials = await getCredentials(newInputs, context) as ICredentials; // 此处预期是可以获取应用中心注入的 sts 的数据
   const currentRegion = _.get(context, 'inputs.currentRegion');
   const region = _.get(context, 'inputs.ctx.data.cacheConfig.oss.regionId', currentRegion);
-  credentials.accountId = credentials.accountId || _.get(context, 'inputs.uid');
+  const credentials = {
+    accountId: _.get(context, 'inputs.sts.accountId') || _.get(context, 'inputs.uid'),
+    accessKeyId: _.get(context, 'inputs.sts.accessKeyId'),
+    accessKeySecret: _.get(context, 'inputs.sts.accessKeySecret'),
+    securityToken: _.get(context, 'inputs.sts.securityToken'),
+  };
 
   return {
     region,
