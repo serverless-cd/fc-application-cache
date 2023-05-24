@@ -55,7 +55,6 @@ export default class Cache {
     
     let bucket = _.get(props, 'bucket', '');
     if (_.isEmpty(bucket)) {
-      logger.debug('Bucket does not meet expectations, need to create');
       bucket = `serverless-cd-${region}-cache-${accountId}`;
       this.createBucketName = bucket;
     }
@@ -86,13 +85,23 @@ export default class Cache {
       return { 'cache-hit': false, error: this.error };
     }
     if (this.createBucketName) {
-      this.logger.debug(`retry create bucket: ossutil mb oss://${this.createBucketName}; stdout:`);
-      const { stdout } = spawnSync(`ossutil mb oss://${this.createBucketName} ${this.commonSuffix}`, {
+      this.logger.debug(`Checking bucket exists: ossutil stat oss://${this.createBucketName}; stdout:`);
+      const { stdout } = spawnSync(`ossutil stat oss://${this.createBucketName} ${this.commonSuffix}`, {
         timeout: 10000,
         encoding: 'utf8',
         shell: true,
       });
       this.logger.debug(stdout);
+      if (_.includes(stdout, 'Error:')) {
+      // if (_.includes(stdout, 'StatusCode=404')) { // 仅404
+        this.logger.debug(`retry create bucket: ossutil mb oss://${this.createBucketName}; stdout:`);
+        const { stdout } = spawnSync(`ossutil mb oss://${this.createBucketName} ${this.commonSuffix}`, {
+          timeout: 10000,
+          encoding: 'utf8',
+          shell: true,
+        });
+        this.logger.debug(stdout);
+      }
     }
     // @ts-ignore
     const { stdout, status } = spawnSync(`ossutil du ${this.cloudUrl} ${this.commonSuffix}`, {
@@ -120,7 +129,7 @@ export default class Cache {
         this.logger.debug(cpResponse.stdout);
         return { 'cache-hit': true };
       } catch (ex) {
-        this.logger.debug(`ossutild cp erorr: ${ex}`);
+        this.logger.debug(`ossutild cp error: ${ex}`);
         this.logger.error('Download cache failed');
         this.error = new Error('Download cache failed');
       }
@@ -130,16 +139,10 @@ export default class Cache {
   }
 
   postRun(cacheHit: boolean, cacheError: any): void {
-    if (cacheError) {
-      this.logger.info('Cache error, skipping');
-      return;
-    }
-    if (cacheHit) {
-      this.logger.info('Cache already exists, skipping put');
-      return;
-    }
+    this.logger.debug(`Cache preRun error: ${cacheError}`);
+    this.logger.debug(`Cache already exists: ${cacheHit}`);
 
-    this.logger.info('Cache not exists, strat push');
+    this.logger.info('Cache not exists, start push');
     fs.ensureDirSync(this.cachePath);
     try {
       const cpResponse = spawnSync(`pwd && ossutil cp ${this.cachePath} ${this.cloudUrl} ${Cache.cpCommonParams.join(' ')} ${this.commonSuffix}`, {
@@ -150,7 +153,7 @@ export default class Cache {
       this.logger.debug(`ossutild du response.status: ${cpResponse.status}; stdout:\n`);
       this.logger.debug(cpResponse.stdout);
     } catch (ex) {
-      this.logger.debug(`ossutild cp erorr: ${ex}`);
+      this.logger.debug(`ossutild cp error: ${ex}`);
       this.logger.error('Download cache failed');
     }
   }
