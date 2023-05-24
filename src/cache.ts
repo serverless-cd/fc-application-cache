@@ -93,7 +93,8 @@ export default class Cache {
         shell: true,
       });
       this.logger.debug(stdout);
-      if (_.includes(stdout, 'StatusCode=404')) {
+      if (_.includes(stdout, 'Error:')) {
+      // if (_.includes(stdout, 'StatusCode=404')) { // 仅404
         this.logger.debug(`retry create bucket: ossutil mb oss://${this.createBucketName}; stdout:`);
         const { stdout } = spawnSync(`ossutil mb oss://${this.createBucketName} ${this.commonSuffix}`, {
           timeout: 10000,
