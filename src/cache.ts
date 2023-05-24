@@ -55,7 +55,6 @@ export default class Cache {
     
     let bucket = _.get(props, 'bucket', '');
     if (_.isEmpty(bucket)) {
-      logger.debug('Bucket does not meet expectations, need to create');
       bucket = `serverless-cd-${region}-cache-${accountId}`;
       this.createBucketName = bucket;
     }
@@ -130,7 +129,7 @@ export default class Cache {
         this.logger.debug(cpResponse.stdout);
         return { 'cache-hit': true };
       } catch (ex) {
-        this.logger.debug(`ossutild cp erorr: ${ex}`);
+        this.logger.debug(`ossutild cp error: ${ex}`);
         this.logger.error('Download cache failed');
         this.error = new Error('Download cache failed');
       }
@@ -140,16 +139,10 @@ export default class Cache {
   }
 
   postRun(cacheHit: boolean, cacheError: any): void {
-    if (cacheError) {
-      this.logger.info('Cache error, skipping');
-      return;
-    }
-    if (cacheHit) {
-      this.logger.info('Cache already exists, skipping put');
-      return;
-    }
+    this.logger.debug(`Cache preRun error: ${cacheError}`);
+    this.logger.debug(`Cache already exists: ${cacheHit}`);
 
-    this.logger.info('Cache not exists, strat push');
+    this.logger.info('Cache not exists, start push');
     fs.ensureDirSync(this.cachePath);
     try {
       const cpResponse = spawnSync(`pwd && ossutil cp ${this.cachePath} ${this.cloudUrl} ${Cache.cpCommonParams.join(' ')} ${this.commonSuffix}`, {
@@ -160,7 +153,7 @@ export default class Cache {
       this.logger.debug(`ossutild du response.status: ${cpResponse.status}; stdout:\n`);
       this.logger.debug(cpResponse.stdout);
     } catch (ex) {
-      this.logger.debug(`ossutild cp erorr: ${ex}`);
+      this.logger.debug(`ossutild cp error: ${ex}`);
       this.logger.error('Download cache failed');
     }
   }
