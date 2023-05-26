@@ -5,6 +5,7 @@ export interface IProps {
   objectKey: string;
   region: string;
   bucket: string;
+  prefix: string;
   cachePath: string;
   credentials: ICredentials;
   internal?: boolean;
@@ -62,7 +63,8 @@ export default class Cache {
     if (_.isEmpty(objectKey)) {
       errorMessage.push('Key does not meet expectations');
     }
-    this.cloudUrl = `oss://${bucket}/${objectKey}${_.endsWith(objectKey, '/') ? '' : '/'}`;
+    const prefix = _.get(props, 'prefix', 'cache-home');
+    this.cloudUrl = `oss://${bucket}/${prefix}/${objectKey}${_.endsWith(objectKey, '/') ? '' : '/'}`;
     this.logger.debug(`cloudUrl: ${this.cloudUrl}`);
     this.cachePath = _.get(props, 'cachePath', '');
     this.logger.debug(`cachePath: ${this.cachePath}`);
@@ -139,8 +141,8 @@ export default class Cache {
   }
 
   postRun(cacheHit: boolean, cacheError: any): void {
-    this.logger.debug(`Cache preRun error: ${cacheError}`);
-    this.logger.debug(`Cache already exists: ${cacheHit}`);
+    this.logger.debug(`Cache preRun error: ${cacheError ? cacheError : false}`);
+    this.logger.debug(`Cache already exists: ${cacheHit ? cacheHit : false}`);
 
     this.logger.info('Cache not exists, start push');
     fs.ensureDirSync(this.cachePath);

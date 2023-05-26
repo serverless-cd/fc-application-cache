@@ -26,6 +26,7 @@ const getCacheInputs = async (inputs: Record<string, any>, context: Record<strin
     objectKey: _.get(newInputs, 'key', ''),
     cachePath: _.get(newInputs, 'path', ''),
     bucket: _.get(context, 'inputs.ctx.data.cacheConfig.oss.bucketName', ''),
+    prefix: _.get(context, 'inputs.ctx.data.cacheConfig.oss.prefix', ''),
     internal: currentRegion === region,
     credentials,
   };

@@ -1,6 +1,6 @@
 {
   "name": "@serverless-cd/fc-application-cache",
-  "version": "0.0.2-beta.5",
+  "version": "0.0.2",
   "description": "> TODO: description",
   "author": "",
   "homepage": "https://github.com/serverless-cd/plugins#readme",
