@@ -1,8 +1,8 @@
 {
   "name": "@serverless-cd/fc-application-cache",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "> TODO: description",
-  "author": "",
+  "author": "wssgryx@163.com",
   "homepage": "https://github.com/serverless-cd/plugins#readme",
   "license": "ISC",
   "main": "./lib/index.js",
@@ -18,6 +18,7 @@
   },
   "scripts": {
     "build": "tsc",
+    "test": "jest --testTimeout 500000",
     "watch": "tsc -w"
   },
   "publishConfig": {

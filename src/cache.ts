@@ -64,7 +64,8 @@ export default class Cache {
       errorMessage.push('Key does not meet expectations');
     }
     const prefix = _.get(props, 'prefix', 'cache-home');
-    this.cloudUrl = `oss://${bucket}/${prefix}/${objectKey}${_.endsWith(objectKey, '/') ? '' : '/'}`;
+    // this.cloudUrl = `oss://${bucket}/${prefix ? `${prefix}/` : ''}${objectKey}${_.endsWith(objectKey, '/') ? '' : '/'}`;
+    this.cloudUrl = this.getCloudUrl(bucket, objectKey, prefix);
     this.logger.debug(`cloudUrl: ${this.cloudUrl}`);
     this.cachePath = _.get(props, 'cachePath', '');
     this.logger.debug(`cachePath: ${this.cachePath}`);
@@ -80,6 +81,21 @@ export default class Cache {
     }
     this.cwd = _.get(props, 'cwd');
     logger.debug(`this.cwd: ${this.cwd}`);
+    if (this.cwd) {
+      fs.ensureDirSync(this.cwd);
+    }
+  }
+
+  private getCloudUrl(bucket: string, objectKey: string, prefix?: string): string {
+    let url = `oss://${bucket}/`;
+    if (prefix) {
+      url += `${prefix}/`;
+    }
+    url += objectKey;
+    if (!_.endsWith(objectKey, '/')) {
+      url += '/';
+    }
+    return url;
   }
 
   run(): { 'cache-hit': boolean, error?: Error } {
@@ -94,6 +110,7 @@ export default class Cache {
         shell: true,
       });
       this.logger.debug(stdout);
+
       if (_.includes(stdout, 'Error:')) {
       // if (_.includes(stdout, 'StatusCode=404')) { // 仅404
         this.logger.debug(`retry create bucket: ossutil mb oss://${this.createBucketName}; stdout:`);
@@ -115,26 +132,28 @@ export default class Cache {
     this.logger.debug(stdout);
     if (status === null || status !== 0) {
       this.error = new Error(`ossutil du error`);
+      this.logger.error(`ossutil du error`);
       return { 'cache-hit': false, error: this.error };
     }
 
     if (!_.includes(stdout, 'total object count: 0')) {
       this.logger.debug('cache-hit: true');
       fs.ensureDirSync(this.cachePath);
-      try {
-        const cpResponse = spawnSync(`ossutil cp ${this.cloudUrl} ${this.cachePath} ${Cache.cpCommonParams.join(' ')} ${this.commonSuffix}`, {
-          encoding: 'utf8',
-          shell: true,
-          cwd: this.cwd,
-        });
-        this.logger.debug(`ossutild du response.status: ${cpResponse.status}; stdout:\n`);
-        this.logger.debug(cpResponse.stdout);
-        return { 'cache-hit': true };
-      } catch (ex) {
-        this.logger.debug(`ossutild cp error: ${ex}`);
-        this.logger.error('Download cache failed');
-        this.error = new Error('Download cache failed');
+
+      const cpResponse = spawnSync(`ossutil cp ${this.cloudUrl} ${this.cachePath} ${Cache.cpCommonParams.join(' ')} ${this.commonSuffix}`, {
+        encoding: 'utf8',
+        shell: true,
+        cwd: this.cwd,
+      });
+  
+      if (cpResponse.error) {
+        this.logger.error(`ossutild cp ${cpResponse.error}`);
+        return { 'cache-hit': false, error: cpResponse.error };
       }
+
+      this.logger.debug(`ossutild cp response.status: ${cpResponse.status}; stdout:\n`);
+      this.logger.debug(cpResponse.stdout);
+      return { 'cache-hit': true };
     }
     this.logger.debug('cache-hit: false');
     return { 'cache-hit': false, error: this.error };
@@ -144,19 +163,19 @@ export default class Cache {
     this.logger.debug(`Cache preRun error: ${cacheError ? cacheError : false}`);
     this.logger.debug(`Cache already exists: ${cacheHit ? cacheHit : false}`);
 
-    this.logger.info('Cache not exists, start push');
+    this.logger.info('Start push');
     fs.ensureDirSync(this.cachePath);
-    try {
-      const cpResponse = spawnSync(`pwd && ossutil cp ${this.cachePath} ${this.cloudUrl} ${Cache.cpCommonParams.join(' ')} ${this.commonSuffix}`, {
-        encoding: 'utf8',
-        shell: true,
-        cwd: this.cwd,
-      });
-      this.logger.debug(`ossutild du response.status: ${cpResponse.status}; stdout:\n`);
-      this.logger.debug(cpResponse.stdout);
-    } catch (ex) {
-      this.logger.debug(`ossutild cp error: ${ex}`);
-      this.logger.error('Download cache failed');
+
+    const cpResponse = spawnSync(`pwd && ossutil cp ${this.cachePath} ${this.cloudUrl} ${Cache.cpCommonParams.join(' ')} ${this.commonSuffix}`, {
+      encoding: 'utf8',
+      shell: true,
+      cwd: this.cwd,
+    });
+    if (cpResponse.error) {
+      this.logger.error(`ossutild cp ${cpResponse.error}`);
+      return;
     }
+    this.logger.debug(`ossutild cp response.status: ${cpResponse.status}; stdout:\n`);
+    this.logger.debug(cpResponse.stdout);
   }
 }
