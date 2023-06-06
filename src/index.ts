@@ -13,7 +13,7 @@ const getCacheInputs = async (inputs: Record<string, any>, context: Record<strin
 
   const currentRegion = _.get(context, 'inputs.currentRegion');
   const region = _.get(context, 'inputs.ctx.data.cacheConfig.oss.regionId', currentRegion);
-  const credentials = {
+  const credentials: ICredentials = {
     accountId: _.get(context, 'inputs.sts.accountId') || _.get(context, 'inputs.uid'),
     accessKeyId: _.get(context, 'inputs.sts.accessKeyId'),
     accessKeySecret: _.get(context, 'inputs.sts.accessKeySecret'),
@@ -26,6 +26,7 @@ const getCacheInputs = async (inputs: Record<string, any>, context: Record<strin
     objectKey: _.get(newInputs, 'key', ''),
     cachePath: _.get(newInputs, 'path', ''),
     bucket: _.get(context, 'inputs.ctx.data.cacheConfig.oss.bucketName', ''),
+    prefix: _.get(context, 'inputs.ctx.data.cacheConfig.oss.prefix'),
     internal: currentRegion === region,
     credentials,
   };
